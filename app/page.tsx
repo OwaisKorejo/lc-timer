@@ -207,20 +207,17 @@ function Study({ active }: { active: boolean }) {
         {time}
       </h1>
 
-      <div className="flex flex-col items-center gap-4">
-        <p className="text-sm tracking-wide text-muted">{phase}</p>
-        <p className="flex gap-5 text-sm tracking-wide">
-          <button onClick={toggle} className="cursor-pointer underline underline-offset-4">
-            {running ? "pause" : "start"}
-          </button>
-          <button
-            onClick={() => reset()}
-            className="cursor-pointer text-muted transition-colors duration-300 hover:text-foreground"
-          >
-            reset
-          </button>
-        </p>
-      </div>
+      <p className="flex gap-5 text-sm tracking-wide">
+        <button onClick={toggle} className="cursor-pointer underline underline-offset-4">
+          {running ? "pause" : "start"}
+        </button>
+        <button
+          onClick={() => reset()}
+          className="cursor-pointer text-muted transition-colors duration-300 hover:text-foreground"
+        >
+          reset
+        </button>
+      </p>
     </div>
   );
 }
