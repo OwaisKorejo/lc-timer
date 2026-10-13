@@ -6,6 +6,14 @@ import { useEffect, useRef, useState } from "react";
 const TARGET = Date.parse("2027-06-09T09:30:00+01:00");
 const DAY = 86_400_000;
 const UNITS = ["h", "m", "s", "ms"];
+const TABS = ["countdown", "study"] as const;
+// [focus, break] in minutes
+const PRESETS = [
+  [25, 5],
+  [50, 10],
+  [90, 20],
+];
+const MIN = 60_000;
 
 const toggleTheme = (e: React.MouseEvent) => {
   const root = document.documentElement;
@@ -48,7 +56,22 @@ const toggleTheme = (e: React.MouseEvent) => {
   );
 };
 
-export default function Home() {
+const beep = () => {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain).connect(ctx.destination);
+    osc.frequency.value = 660;
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.8);
+    osc.onended = () => ctx.close();
+  } catch {}
+};
+
+function Countdown() {
   const [days, setDays] = useState<number | null>(null);
   const [done, setDone] = useState(false);
   const parts = useRef<(HTMLSpanElement | null)[]>([]);
@@ -86,18 +109,7 @@ export default function Home() {
   }, [days]);
 
   return (
-    <main className="relative flex flex-1 flex-col items-center justify-center gap-10 px-6 select-none">
-      <button
-        onClick={toggleTheme}
-        aria-label="toggle dark mode"
-        className="absolute top-5 right-5 cursor-pointer p-1 text-muted transition-colors duration-300 hover:text-foreground"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-          <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.25" />
-          <path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" />
-        </svg>
-      </button>
-
+    <>
       <p className="text-xs tracking-wide text-muted">wed 9 june 2027 · 9:30</p>
 
       <div
@@ -130,6 +142,123 @@ export default function Home() {
       </div>
 
       <p className="text-sm tracking-wide text-muted">till the leaving cert</p>
+    </>
+  );
+}
+
+function Study({ active }: { active: boolean }) {
+  const [preset, setPreset] = useState(0);
+  const [onBreak, setOnBreak] = useState(false);
+  const [left, setLeft] = useState(PRESETS[0][0] * MIN);
+  const [running, setRunning] = useState(false);
+  const endAt = useRef(0);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      const ms = endAt.current - Date.now();
+      if (ms > 0) return setLeft(ms);
+      beep();
+      const next = PRESETS[preset][onBreak ? 0 : 1] * MIN;
+      endAt.current = Date.now() + next;
+      setOnBreak(!onBreak);
+      setLeft(next);
+    }, 200);
+    return () => clearInterval(id);
+  }, [running, preset, onBreak]);
+
+  const reset = (i = preset) => {
+    setPreset(i);
+    setRunning(false);
+    setOnBreak(false);
+    setLeft(PRESETS[i][0] * MIN);
+  };
+
+  const toggle = () => {
+    endAt.current = Date.now() + left;
+    setRunning(!running);
+  };
+
+  const secs = Math.ceil(left / 1000);
+  const time = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
+  const phase = onBreak ? "break" : "focus";
+
+  useEffect(() => {
+    if (active) document.title = `${time} · ${phase}`;
+  }, [active, time, phase]);
+
+  return (
+    <div className={active ? "contents" : "hidden"}>
+      <p className="flex gap-5 font-mono text-xs tracking-wide">
+        {PRESETS.map(([focus, rest], i) => (
+          <button
+            key={focus}
+            onClick={() => reset(i)}
+            className={`cursor-pointer transition-colors duration-300 hover:text-foreground ${
+              preset === i ? "text-foreground" : "text-muted"
+            }`}
+          >
+            {focus}/{rest}
+          </button>
+        ))}
+      </p>
+
+      <h1 className="font-mono text-[22vw] leading-none font-light tracking-tighter tabular-nums sm:text-[11rem]">
+        {time}
+      </h1>
+
+      <div className="flex flex-col items-center gap-4">
+        <p className="text-sm tracking-wide text-muted">{phase}</p>
+        <p className="flex gap-5 text-sm tracking-wide">
+          <button onClick={toggle} className="cursor-pointer underline underline-offset-4">
+            {running ? "pause" : "start"}
+          </button>
+          <button
+            onClick={() => reset()}
+            className="cursor-pointer text-muted transition-colors duration-300 hover:text-foreground"
+          >
+            reset
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  const [tab, setTab] = useState<(typeof TABS)[number]>("countdown");
+
+  return (
+    <main className="relative flex flex-1 flex-col items-center justify-center gap-10 px-6 select-none">
+      <button
+        onClick={toggleTheme}
+        aria-label="toggle dark mode"
+        className="absolute top-5 right-5 cursor-pointer p-1 text-muted transition-colors duration-300 hover:text-foreground"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+          <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.25" />
+          <path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" />
+        </svg>
+      </button>
+
+      <nav className="absolute top-5 flex gap-5 text-sm tracking-wide">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            aria-current={tab === t ? "page" : undefined}
+            className={`cursor-pointer transition-colors duration-300 hover:text-foreground ${
+              tab === t ? "text-foreground" : "text-muted"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "countdown" && <Countdown />}
+      {/* stays mounted so a running timer survives switching tabs */}
+      <Study active={tab === "study"} />
 
       <a
         href="https://owaiskorejo.com"
