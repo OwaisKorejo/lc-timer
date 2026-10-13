@@ -138,7 +138,7 @@ export default function Home() {
         className="group absolute bottom-6 flex items-center gap-1.5 text-base tracking-wide text-foreground"
       >
         <span>
-          made by <span className="underline underline-offset-4">owais</span>
+          made for fun by <span className="underline underline-offset-4">owais</span>
         </span>
         <svg
           width="10"
