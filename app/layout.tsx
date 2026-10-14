@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}`}
         </Script>
         {children}
+        <Analytics />
       </body>
     </html>
   );
